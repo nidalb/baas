@@ -11,11 +11,11 @@ Route::get('/', function () {
 Route::group(['prefix' => '/1/'], function () {
 
     Route::group(['prefix' => 'classes/'], function () {
-        Route::post('{className}',              'ParseObjectController@create');
-        Route::get('{className}/{objectId}',    'ParseObjectController@getById');
-        Route::put('{className}/{objectId}',    'ParseObjectController@update');
-        Route::get('{className}',               'ParseObjectController@get');
-        Route::delete('{className}/{objectId}', 'ParseObjectController@delete');
+        Route::post('{className}',              'Parse\ParseObjectController@create');
+        Route::get('{className}/{objectId}',    'Parse\ParseObjectController@getById');
+        Route::put('{className}/{objectId}',    'Parse\ParseObjectController@update');
+        Route::get('{className}',               'Parse\ParseObjectController@get');
+        Route::delete('{className}/{objectId}', 'Parse\ParseObjectController@delete');
     });
 
 });
