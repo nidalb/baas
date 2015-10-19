@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class Todo extends Model
 {
-    //
+    public $fillable = array('title','completed');
 }

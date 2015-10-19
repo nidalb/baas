@@ -40,16 +40,19 @@ jQuery(function ($) {
 
 	var App = {
 		init: function () {
-			this.todos = util.store('todos-jquery');
-			this.cacheElements();
-			this.bindEvents();
+            var $this = this;
+            $.getJSON('todo/all',function(data){
+                $this.todos = data;
+                $this.cacheElements();
+                $this.bindEvents();
 
-			new Router({
-				'/:filter': function (filter) {
-					this.filter = filter;
-					this.render();
-				}.bind(this)
-			}).init('/all');
+                new Router({
+                    '/:filter': function (filter) {
+                        $this.filter = filter;
+                        $this.render();
+                    }.bind($this)
+                }).init('/all');
+            });
 		},
 		cacheElements: function () {
 			this.todoTemplate = Handlebars.compile($('#todo-template').html());
@@ -127,7 +130,7 @@ jQuery(function ($) {
 			return this.todos;
 		},
 		destroyCompleted: function () {
-			this.todos = this.getActiveTodos();
+            this.todos = this.getActiveTodos();
 			this.filter = 'all';
 			this.render();
 		},
@@ -139,7 +142,7 @@ jQuery(function ($) {
 			var i = todos.length;
 
 			while (i--) {
-				if (todos[i].id === id) {
+				if (todos[i].id == id) {
 					return i;
 				}
 			}
@@ -151,20 +154,23 @@ jQuery(function ($) {
 			if (e.which !== ENTER_KEY || !val) {
 				return;
 			}
-			
-			this.todos.push({
-				id: util.uuid(),
-				title: val,
-				completed: false
-			});
 
-			$input.val('');
+            var $this = this;
+            $.post( "todo/create", { title: val }, function(data){
+                $this.todos.push({
+                    id: data,
+                    title: val,
+                    completed: false
+                });
 
-			this.render();
+                $input.val('');
+                $this.render();
+            } );
 		},
 		toggle: function (e) {
 			var i = this.indexFromEl(e.target);
 			this.todos[i].completed = !this.todos[i].completed;
+            $.post("todo/update/"+this.todos[i].id,{completed: this.todos[i].completed});
 			this.render();
 		},
 		edit: function (e) {
@@ -195,6 +201,7 @@ jQuery(function ($) {
 
 			if (val) {
 				this.todos[i].title = val;
+                $.post("todo/update/"+this.todos[i].id,{title : val});
 			} else {
 				this.todos.splice(i, 1);
 			}
@@ -202,10 +209,15 @@ jQuery(function ($) {
 			this.render();
 		},
 		destroy: function (e) {
-			this.todos.splice(this.indexFromEl(e.target), 1);
-			this.render();
+            var object = this.todos.splice(this.indexFromEl(e.target), 1);
+            this.render();
+            $.post("todo/delete/"+object[0].id);
 		}
 	};
 
 	App.init();
+
+    function dd(str){
+        console.log(str);
+    }
 });
