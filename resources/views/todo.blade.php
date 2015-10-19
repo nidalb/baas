@@ -3,9 +3,9 @@
 	<head>
 		<meta charset="utf-8">
 		<title>jQuery • TodoMVC</title>
-		<link rel="stylesheet" href="node_modules/todomvc-common/base.css">
-		<link rel="stylesheet" href="node_modules/todomvc-app-css/index.css">
-		<link rel="stylesheet" href="css/app.css">
+		<link rel="stylesheet" href="{{ URL::asset('node_modules/todomvc-common/base.css')}}">
+		<link rel="stylesheet" href="{{ URL::asset('node_modules/todomvc-app-css/index.css')}}">
+		<link rel="stylesheet" href="{{ URL::asset('css/app.css')}}">
 	</head>
 	<body>
 		<section id="todoapp">
@@ -52,10 +52,10 @@
 			</ul>
 			@{{#if completedTodos}}<button id="clear-completed">Clear completed</button>@{{/if}}
 		</script>
-		<script src="node_modules/todomvc-common/base.js"></script>
-		<script src="node_modules/jquery/dist/jquery.js"></script>
-		<script src="node_modules/handlebars/dist/handlebars.js"></script>
-		<script src="node_modules/director/build/director.js"></script>
-		<script src="js/app.js"></script>
+		<script src="{{ URL::asset('node_modules/todomvc-common/base.js')}}"></script>
+		<script src="{{ URL::asset('node_modules/jquery/dist/jquery.js')}}"></script>
+		<script src="{{ URL::asset('node_modules/handlebars/dist/handlebars.js')}}"></script>
+		<script src="{{ URL::asset('node_modules/director/build/director.js')}}"></script>
+		<script src="{{ URL::asset('js/app.js')}}"></script>
 	</body>
 </html>

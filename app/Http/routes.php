@@ -4,9 +4,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/todo', function () {
-    return view('todo');
-});
+Route::controller('todo','TodoController');
 
 /*
  * Object Routes based on Parse Rest API documentation
