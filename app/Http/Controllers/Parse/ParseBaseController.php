@@ -72,14 +72,8 @@ class ParseBaseController extends Controller
             'include' => null,
         );
         $parameters = array_merge($defaultParameters, $parameters);
-
-        $where = $parameters['where'];
-        $limit = $parameters['limit'];
-        $skip = $parameters['skip'];
-        $order = $parameters['order'];
-        $keys = $parameters['keys'];
-        $count = $parameters['count'];
-        $include = $parameters['include'];
+		extract($parameters);
+        
 
         // specify the selected columns
         $selected_columns = $this->select($keys);
