@@ -369,6 +369,12 @@ class ParseHelper
                     }
                 }
                 // todo remove the fk_id if relation is included
+                $getForeignKey=$results->$relationName->getForeignKey();
+                if(isset($results->$getForeignKey)){
+                    unset($results->$getForeignKey);
+                }
+
+
             }
         }
     }
