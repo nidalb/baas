@@ -336,7 +336,8 @@ class ParseHelper
             // convert $notIncludedRelations to parse Pointers
             foreach ($notIncludedRelations as $relation) {
                 // todo move it to ModelRelations function (model and fk)
-                $fk = $relation . "_id";
+                //$fk = $relation . "_id";
+                $fk = $results->$relation->getForeignKey();
                 $reflect = new ReflectionClass($results->$relation()->getQuery()->getModel());
                 $className = $reflect->getShortName();
 
@@ -348,7 +349,10 @@ class ParseHelper
                         $results->$relation->className = $className;
                         $results->$relation->objectId = $results->$fk;
                     }
-                    unset($results->$fk);
+                    if($fk !=$relation){
+                        unset($results->$fk);
+                    }
+
                 }
             }
 
