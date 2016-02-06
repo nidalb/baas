@@ -23,7 +23,6 @@ class ParseObjectController extends ParseBaseController
         try {
             ParseHelper::prepareRequest();
         } catch (\Exception $ex) {
-            dd($ex->getMessage());
             return new ParseResponse($ex);
         }
     }
@@ -37,13 +36,18 @@ class ParseObjectController extends ParseBaseController
      */
     public function create($className)
     {
+        if($className=="_User"){
+            $className="users";
+        }
         $this->prepareClassMetadata($className);
 
         $inputs = $this->getInputs();
 
         $this->save($className,$inputs);
+        $KeyName=$this->object->getKeyName();
+        $CreatedAtColumn=$this->object->getCreatedAtColumn();
+        return response()->json(['createdAt' => ParseHelper::parseDate($this->object->$CreatedAtColumn), 'objectId' => $this->object->$KeyName]);
 
-        return new ParseResponse($this->object);
     }
 
     /**
@@ -87,7 +91,10 @@ class ParseObjectController extends ParseBaseController
 
         $this->save($className,$inputs,$objectId);
 
-        return new ParseResponse($this->object);
+        $UpdatedAtColumn=$this->object->getUpdatedAtColumn();
+        return response()->json(['updatedAt' => ParseHelper::parseDate($this->object->$UpdatedAtColumn)]);
+
+        // return new ParseResponse($this->object);
     }
 
     /**

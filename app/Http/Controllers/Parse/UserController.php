@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 
-class UserControllerParse extends ParseBaseController
+class UserController extends ParseBaseController
 {
 
     /**
@@ -205,6 +205,7 @@ class UserControllerParse extends ParseBaseController
      */
     public function create($className = "User")
     {
+
         $this->prepareClassMetadata($className);
         $inputs = new Collection($this->getInputs());
 
@@ -214,14 +215,14 @@ class UserControllerParse extends ParseBaseController
         // if no authData, it must be a regular signup
         if ($inputs->has('username') && $inputs->has('password')) {
             $this->validateSignupRequest($inputs);
-
             // hash the plain password before save in the database
             $hashedPassword = Hash::make($inputs->get('password'));
-            $inputs->setoffsetSet('password', $hashedPassword);
 
             // save the user regularly
+            $inputs->offsetSet('password',$hashedPassword);
             $parameters = array_except($inputs->toArray(), array('authData', 'profile'));
             $this->save($className, $parameters);
+
         } elseif ($authData = $inputs->get('authData')) {
             // try to get currently linked account
             // otherwise, create new one
@@ -301,9 +302,9 @@ class UserControllerParse extends ParseBaseController
      */
     private function validateSignupRequest($inputs)
     {
-        $validator = Validator::make($inputs,
+        $validator = Validator::make($this->getInputs(),
             array(
-                'username' => 'required|unique:users',
+                'username' => 'required|unique:tb_users',
                 'password' => 'required|min:3',
             )
         );

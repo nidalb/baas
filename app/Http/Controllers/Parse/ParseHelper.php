@@ -56,7 +56,7 @@ class ParseHelper
                 $error_code = 141;
                 $message = $additionalInfo;
         }
-        throw new \Exception($message, $error_code);
+        throw new \ParseException($message, $error_code);
     }
 
     public static function makeModelObject($classNameOrObject)
@@ -68,20 +68,20 @@ class ParseHelper
 
         // be sure that the class name is Upper case
         $classNameOrObject = ucfirst($classNameOrObject);
-
         // get list of Models paths both from CMS or enabled Addons
         $paths = self::getModelsPaths();
 
         // loop over the paths and try to get the model
         foreach ($paths as $path) {
             $fullClassName = $path . $classNameOrObject;
+
             if (class_exists($fullClassName)) {
                 return \App::make($fullClassName);
             }
         }
 
         // if class not found, thow an exception
-        self::throwException(105);
+        self::throwException(202);
     }
 
     public static function prepareRequest()
@@ -104,7 +104,7 @@ class ParseHelper
     public static function prepareRequestBasicFields($inputs, $object)
     {
         $map = array(
-            'objectId'  => $object->getKeyName(),
+            'objectId' => $object->getKeyName(),
             'createdAt' => $object->getCreatedAtColumn(),
             'updatedAt' => $object->getUpdatedAtColumn(),
         );
@@ -123,7 +123,7 @@ class ParseHelper
             if ($key == "createdAt" || $key == "updatedAt") {
                 $inputs[$key] = new Carbon($val);
             } elseif (is_array($val)) {
-                if (array_get($val,'__type') == 'Date') {
+                if (array_get($val, '__type') == 'Date') {
                     $inputs[$key] = new Carbon($val['iso']);
                 } else {
                     // recursive for Parse Objects
@@ -139,7 +139,7 @@ class ParseHelper
     {
         foreach ($inputs as $key => $val) {
             if (is_array($val)) {
-                if (array_get($val,'__type') == 'Bytes') {
+                if (array_get($val, '__type') == 'Bytes') {
                     $inputs[$key] = $val['base64'];
                 } else {
                     // recursive for Parse Objects
@@ -155,7 +155,7 @@ class ParseHelper
     {
         foreach ($inputs as $key => $val) {
             if (is_array($val)) {
-                if (array_get($val,'__type') == 'Pointer') {
+                if (array_get($val, '__type') == 'Pointer') {
                     // convert Pointers to Eloquent Models
                     $inputs[$key] = self::makeModelObject($val['className'])->find($val['objectId']);
                 } else {
@@ -177,7 +177,7 @@ class ParseHelper
     }
 
 
-    public static function getModelRelations($classNameOrObject,$detailed = false)
+    public static function getModelRelations($classNameOrObject, $detailed = false)
     {
         $relations = array();
         $object = self::makeModelObject($classNameOrObject);
@@ -207,14 +207,34 @@ class ParseHelper
                     'morphToMany'
                 );
                 foreach ($supportedRelations as $relation) {
+                    $fk = "";
                     $search = '$this->' . $relation . '(';
                     if ($pos = stripos($code, $search)) {
+                        $pos += 2;
                         // currently we just need the relation name
                         // todo return additional info like Model and Foreign key
+
+                        $search = ",'";
+                        $search2 = "'";
+                        $pos = stripos($code, $search);
+                        if ($pos) {
+                            $pos += 2;
+                            $pos2 = stripos($code, $search2, $pos);
+                            $fk = substr($code, $pos, $pos2 - $pos);
+
+                        }
+
                         if ($method != "morphedByMany") {
-                            $relations[] = $method;
+                            if ($detailed) {
+                                $relations[$method] = ['method' => $method, 'fk' => $fk];
+                            } else {
+                                $relations[] = $method;
+                            }
+
                         }
                     }
+
+
                 }
             }
         }
@@ -230,6 +250,7 @@ class ParseHelper
         // todo this function must be overidable to remove the dependency with the SN
         $paths = array();
         $paths[] = 'App\\';
+        $paths[] = 'App\\Models\\';
         return $paths;
     }
 
@@ -240,7 +261,10 @@ class ParseHelper
         self::prepareResponseBasicFields($results);
         self::prepareResponseDateFields($results);
         self::prepareResponseBytesFields($results);
+        self::prepareResponsefile($results);
         self::prepareResponseRelations($results);
+
+        // dd($results);
         $results = $results->toArray();
 
         if (isset($response['results'])) {
@@ -252,6 +276,37 @@ class ParseHelper
         return $response;
     }
 
+
+    private static function prepareResponsefile($results)
+    {
+
+        if ($results instanceof Collection) {
+            foreach ($results as $object) {
+                self::prepareResponsefile($object);
+            }
+        } else {
+            $fileColumns = $results->fileColumns ? $results->fileColumns : array();
+
+            foreach ($fileColumns as $column) {
+                if ($results->$column and is_string($results->$column)) {
+                    $url = $results->$column;
+                    if (empty(parse_url($results->$column)['scheme'])) {
+                        $url = \URL::to('/') . "/uploads/" . $results->$column;
+                    }
+                    $results->$column = array(
+
+                        "__type" => "File",
+                        "name" => basename($results->$column),
+                        'url' => $url
+                    );
+                } elseif (!is_array($results->$column)) {
+                    unset($results->$column);
+                }
+            }
+        }
+    }
+
+
     private static function prepareResponseBasicFields($results)
     {
         if ($results instanceof Collection) {
@@ -259,8 +314,16 @@ class ParseHelper
                 self::prepareResponseBasicFields($object);
             }
         } else {
+
+            foreach ($results as $k => $result) {
+                if (is_null($result)) {
+                    unset($results->$k);
+                }
+
+            }
+
             $map = array(
-                'objectId'  => $results->getKeyName(),
+                'objectId' => $results->getKeyName(),
                 'createdAt' => $results->getCreatedAtColumn(),
                 'updatedAt' => $results->getUpdatedAtColumn(),
             );
@@ -284,7 +347,7 @@ class ParseHelper
             foreach ($results->getAttributes() as $key => $val) {
 
                 if ($val === "0000-00-00 00:00:00") {
-                    $results->$key = null;
+                    // $results->$key = null;
                 } else {
                     if ($key == "createdAt" || $key == "updatedAt") {
                         // todo conflict if the database name = to parse name
@@ -295,7 +358,7 @@ class ParseHelper
                     } elseif (is_string($val) && is_valid_datetime($val)) {
                         $results->$key = array(
                             "__type" => "Date",
-                            "iso"    => self::parseDate($val)
+                            "iso" => self::parseDate($val)
                         );
                     }
                 }
@@ -336,39 +399,47 @@ class ParseHelper
 
             // convert $notIncludedRelations to parse Pointers
             foreach ($notIncludedRelations as $relation) {
-                $fk = $results->$relation->getForeignKey();
+                $fk = self::getForeignKey($results, $relation);
                 $reflect = new ReflectionClass($results->$relation()->getQuery()->getModel());
                 $className = $reflect->getShortName();
 
                 if (in_array($fk, $columns)) {
-                    $results->$relation = null;
+                    //  $results->$relation = null;
                     if ($results->$fk) {
                         $results->$relation = new \stdClass();
                         $results->$relation->__type = 'Pointer';
                         $results->$relation->className = $className;
                         $results->$relation->objectId = $results->$fk;
                     }
-                    if($fk !=$relation){
+                    if ($fk != $relation) {
                         unset($results->$fk);
                     }
 
-                }else{
+                } else {/*
                     // todo move it to ModelRelations function (model and fk)
-                    $results->load($relation);
+                    $clone_results = clone $results;
+                    $clone_results->load($relation);
                     $tempArray = array();
-                    if (is_array($results->$relation)) {
-                        foreach($results->$relation as $val) {
+                    if (!empty($clone_results->$relation->toarray())) {
+                        foreach($clone_results->$relation->toarray() as $val) {
+
                             $temp=new \stdClass();
-                            $temp->__type = 'Pointer';
+                            $temp->__type = 'Relation';
                             $temp->className = $className;
-                            $temp->objectId = $val->$fk;
+                            $temp->objectId = $val['objectId'];
                             $tempArray[]=$temp;
                         }
                         $results->$relation = $tempArray;
+                    }else{
+
                     }
+                    */
+                    $temp = new \stdClass();
+                    $temp->__type = 'Relation';
+                    $temp->className = $className;
+                    $results->$relation = $temp;
 
                 }
-
 
 
             }
@@ -384,10 +455,12 @@ class ParseHelper
                     } else {
                         self::prepareResponseIncludedRelations($relationData);
                     }
+                } else {
+                    unset($results->$relationName);
                 }
 
-                $getForeignKey=$results->$relationName->getForeignKey();
-                if(isset($results->$getForeignKey)){
+                $getForeignKey = self::getForeignKey($results, $relationName);
+                if (isset($results->$getForeignKey)) {
                     unset($results->$getForeignKey);
                 }
             }
@@ -397,8 +470,8 @@ class ParseHelper
     /**
      * @param $val
      * @return string
-
-    private static function parseDate($val)
+     */
+    public static function parseDate($val)
     {
         return Carbon::parse($val)->format('Y-m-d\\TH:i:s.z\Z');
     }
@@ -417,7 +490,21 @@ class ParseHelper
         // allow for deep response preparation
         self::prepareResponse($relationData);
     }
+
+    public static function getForeignKey($class, $rel)
+    {
+        $clone_class = clone $class;
+        $r = self::getModelRelations($class, true);
+        if (isset($r[$rel]) and $r[$rel] != "") {
+            return $r[$rel]['fk'];
+        } elseif ($clone_class->$rel) {
+            return $clone_class->$rel->getForeignKey();
+        } else {
+            return $rel . "_id";
+        }
+    }
 }
+
 
 function is_valid_datetime($dateTime)
 {
