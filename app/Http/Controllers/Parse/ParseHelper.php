@@ -176,7 +176,8 @@ class ParseHelper
         return \Schema::getColumnListing($object->getTable());
     }
 
-    public static function getModelRelations($classNameOrObject)
+
+    public static function getModelRelations($classNameOrObject,$detailed = false)
     {
         $relations = array();
         $object = self::makeModelObject($classNameOrObject);
@@ -335,8 +336,6 @@ class ParseHelper
 
             // convert $notIncludedRelations to parse Pointers
             foreach ($notIncludedRelations as $relation) {
-                // todo move it to ModelRelations function (model and fk)
-                //$fk = $relation . "_id";
                 $fk = $results->$relation->getForeignKey();
                 $reflect = new ReflectionClass($results->$relation()->getQuery()->getModel());
                 $className = $reflect->getShortName();
@@ -353,7 +352,25 @@ class ParseHelper
                         unset($results->$fk);
                     }
 
+                }else{
+                    // todo move it to ModelRelations function (model and fk)
+                    $results->load($relation);
+                    $tempArray = array();
+                    if (is_array($results->$relation)) {
+                        foreach($results->$relation as $val) {
+                            $temp=new \stdClass();
+                            $temp->__type = 'Pointer';
+                            $temp->className = $className;
+                            $temp->objectId = $val->$fk;
+                            $tempArray[]=$temp;
+                        }
+                        $results->$relation = $tempArray;
+                    }
+
                 }
+
+
+
             }
 
             // convert $includedRelations to parse Objects
@@ -368,13 +385,11 @@ class ParseHelper
                         self::prepareResponseIncludedRelations($relationData);
                     }
                 }
-                // todo remove the fk_id if relation is included
+
                 $getForeignKey=$results->$relationName->getForeignKey();
                 if(isset($results->$getForeignKey)){
                     unset($results->$getForeignKey);
                 }
-
-
             }
         }
     }
@@ -382,7 +397,7 @@ class ParseHelper
     /**
      * @param $val
      * @return string
-     */
+
     private static function parseDate($val)
     {
         return Carbon::parse($val)->format('Y-m-d\\TH:i:s.z\Z');

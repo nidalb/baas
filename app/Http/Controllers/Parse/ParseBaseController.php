@@ -275,8 +275,8 @@ class ParseBaseController extends Controller
                     $tempVal = $val->{$parseOperator};
                     // the value can be direct value or object
                     if (is_object($tempVal) && isset($tempVal->{'__type'}) && $tempVal->{'__type'} == "Pointer") {
-                        // todo not working perfectly
                         $pointer_class_name = $tempVal->{'className'};
+                        // todo not working perfectly
                         $tempKey = strtolower($pointer_class_name . '_id');
                         $tempVal = $tempVal->{$this->object->getKeyName()};
                         $queryBuilder = $queryBuilder->where($tempKey, $operator, $tempVal, $boolean);
